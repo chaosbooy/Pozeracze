@@ -6,9 +6,11 @@
         xmlns:local="clr-namespace:PozeraczePart1"
         xmlns:syncfusion="http://schemas.syncfusion.com/wpf"
         mc:Ignorable="d"
-        Title="MainWindow" Height="500" Width="900"
+        Title="MainWindow" 
+        MinHeight="500" MinWidth="850"
         DataContext="{Binding RelativeSource={RelativeSource Self}}"
-        Background="#FFF5D7">
+        Background="#FFF5D7"
+        SizeChanged="Window_SizeChanged">
 
     <Grid>
 
@@ -17,11 +19,12 @@
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                 <StackPanel Margin="30">
                     <Label Content="Player 1 color" />
-                    <syncfusion:ColorPicker Name="firstColor" Height="100" Width="120" Color="{Binding Color1, Mode=TwoWay}" BrushMode="Solid" EnableSolidToGradientSwitch="False" />
+                    <syncfusion:ColorPicker Name="firstColor" Height="100" Width="120" Color="{Binding Color1, Mode=TwoWay}" BrushMode="Solid" EnableSolidToGradientSwitch="False" IsAlphaVisible="False" />
+                    <Label Content="{Binding Color1, Mode=TwoWay}" />
                 </StackPanel>
                 <StackPanel Margin="30">
                     <Label Content="Player 2 color" />
-                    <syncfusion:ColorPicker Name="secondColor" Height="100" Width="120" Color="{Binding Color2, Mode=TwoWay}" BrushMode="Solid" EnableSolidToGradientSwitch="False" />
+                    <syncfusion:ColorPicker Name="secondColor" Height="100" Width="120" Color="{Binding Color2, Mode=TwoWay}" BrushMode="Solid" EnableSolidToGradientSwitch="False" IsAlphaVisible="False" />
                 </StackPanel>
             </StackPanel>
             <Label Margin="0,20,0,0" Content="Podaj wymiar planszy" HorizontalContentAlignment="Center" />
@@ -87,7 +90,7 @@
                         </Style>
                     </Grid.Resources>
                 </Grid>
-                <Button Content="Lobby" Click="EndGame" />
+                <Button Content="Lobby" Click="EndGame" Background="#FF87CAA4" BorderThickness="0"/>
             </StackPanel>
 
             <StackPanel x:Name="player2">

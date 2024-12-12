@@ -1,4 +1,6 @@
-﻿using System.ComponentModel;
+﻿using System;
+using System.ComponentModel;
+using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
@@ -10,7 +12,6 @@ namespace PozeraczePart1
     public partial class MainWindow : Window, INotifyPropertyChanged
     {
         readonly Regex regex = new Regex("[^0-9]+");
-        private RadialGradientBrush pieceHeld;
         private int pieceHeldId;
         private bool firstTurn;
         private int wallSize;
@@ -19,7 +20,11 @@ namespace PozeraczePart1
         private string _color1;
         private string _color2;
 
-        private int[,] board;
+        private RadialGradientBrush[] player1Backgrounds;
+        private RadialGradientBrush[] player2Backgrounds;
+        private RadialGradientBrush defaultBackground;
+
+        GameBoard backendGame;
 
         public string Color1
         {
@@ -27,6 +32,13 @@ namespace PozeraczePart1
             set
             {
                 _color1 = value;
+
+                if (player2Backgrounds[0] != null)
+                    for (int i = 0; i < pieceCategoryCount; i++)
+                    {
+                        player1Backgrounds[i].GradientStops[0].Color = (Color)ColorConverter.ConvertFromString(Color1);
+                    }
+
                 OnPropertyChanged(nameof(Color1));
             }
         }
@@ -37,6 +49,13 @@ namespace PozeraczePart1
             set
             {
                 _color2 = value;
+
+                if(player2Backgrounds[0] != null)
+                    for (int i = 0; i < pieceCategoryCount; i++)
+                    {
+                        player2Backgrounds[i].GradientStops[0].Color = (Color)ColorConverter.ConvertFromString(Color2);
+                    }
+
                 OnPropertyChanged(nameof(Color2));
             }
         }
@@ -47,12 +66,68 @@ namespace PozeraczePart1
         {
             InitializeComponent();
             DataContext = this; // Set DataContext to the MainWindow instance.
+            backendGame = new GameBoard();
+
+            player1Backgrounds = new RadialGradientBrush[pieceCategoryCount];
+            player2Backgrounds = new RadialGradientBrush[pieceCategoryCount];
+            defaultBackground = new RadialGradientBrush();
+
+            var center = new Point(0.5, 0.5);
+
+            _color1 = "#B2BCF0";
+            _color2 = "#FFCCE1";
             Color1 = "#B2BCF0";
             Color2 = "#FFCCE1";
 
-            board = new int[0, 0];
+            defaultBackground.Center = center;
+            defaultBackground.GradientOrigin = center;
+
+            defaultBackground.GradientStops.Add(new GradientStop(Colors.Gray, 0.4));
+            defaultBackground.GradientStops.Add(new GradientStop(Colors.Transparent, 0.5));
+
+            for (int i = 0; i < pieceCategoryCount; i++)
+            {
+                player1Backgrounds[i] = new RadialGradientBrush();
+                player2Backgrounds[i] = new RadialGradientBrush();
+
+                player1Backgrounds[i].Center = center;
+                player1Backgrounds[i].GradientOrigin = center;
+
+                player2Backgrounds[i].Center = center;
+                player2Backgrounds[i].GradientOrigin = center;
+            }
+
+            for (int i = 1; i <= pieceCategoryCount; i++)
+            {
+                double gradientPlacement = i * 0.33;
+                gradientPlacement -= gradientPlacement > 0.95 ? 0.05 : 0;
+
+                player1Backgrounds[i - 1].GradientStops.Add(new GradientStop((Color)ColorConverter.ConvertFromString(_color1), gradientPlacement));
+                player1Backgrounds[i - 1].GradientStops.Add(new GradientStop(Colors.Transparent, gradientPlacement + 0.05));
+
+                player2Backgrounds[i - 1].GradientStops.Add(new GradientStop((Color)ColorConverter.ConvertFromString(_color2.Normalize()), gradientPlacement));
+                player2Backgrounds[i - 1].GradientStops.Add(new GradientStop(Colors.Transparent, gradientPlacement + 0.05));
+
+                Label tmp1 = new Label
+                {
+                    Background = player1Backgrounds[i - 1],
+                    Content = $"{i}"
+                };
+
+                Label tmp2 = new Label
+                {
+                    Background = player2Backgrounds[i - 1],
+                    Content = $"-{i}"
+                };
+
+                tmp1.MouseLeftButtonDown += PieceSelected;
+                tmp2.MouseLeftButtonDown += PieceSelected;
+
+                player1.Children.Add(tmp1);
+                player2.Children.Add(tmp2);
+            }
+
             firstTurn = true;
-            pieceHeld = new RadialGradientBrush();
         }
 
         private void TextBox_TextChanged(object sender, TextCompositionEventArgs e)
@@ -79,6 +154,13 @@ namespace PozeraczePart1
             wallSize = Convert.ToInt16(s.Text);
         }
 
+        private void Window_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            double newSize = (e.NewSize.Width * 0.6 < e.NewSize.Height * 0.8) ? (e.NewSize.Width * 0.6) : (e.NewSize.Height * 0.8);
+            gameBoard.Height = newSize;
+            gameBoard.Width = newSize;
+        }
+
         protected void OnPropertyChanged(string propertyName)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
@@ -90,7 +172,8 @@ namespace PozeraczePart1
                 wallSize = 3;
 
             //Creating center game board
-            board = new int[wallSize, wallSize];
+            backendGame = new GameBoard(wallSize);
+
             gameBoard.ColumnDefinitions.Clear();
             gameBoard.RowDefinitions.Clear();
             gameBoard.Children.Clear();
@@ -108,7 +191,7 @@ namespace PozeraczePart1
                 {
                     Label tmp = new Label
                     {
-                        Content = $"{i * wallSize + j}"
+                        Background = defaultBackground
                     };
 
                     tmp.MouseEnter += GameBoard_MouseEnter;
@@ -121,56 +204,6 @@ namespace PozeraczePart1
 
                     gameBoard.Children.Add(tmp);
                 }
-            }
-
-            //Creating Player pieces
-            player1.Children.Clear();
-            player2.Children.Clear();
-
-            RadialGradientBrush player1Gradient = new RadialGradientBrush();
-            RadialGradientBrush player2Gradient = new RadialGradientBrush();
-
-            player1Gradient.Center = new Point(0.5, 0.5);
-            player1Gradient.GradientOrigin = new Point(0.5, 0.5);
-
-            player2Gradient.Center = new Point(0.5, 0.5);
-            player1Gradient.GradientOrigin = new Point(0.5, 0.5);
-
-            for (int i = 1; i <= pieceCategoryCount; i++)
-            {
-                player1Gradient.GradientStops.Clear();
-                player2Gradient.GradientStops.Clear();
-
-                double gradientPlacement = i * 0.33;
-                gradientPlacement -= gradientPlacement > 0.95 ? 0.05 : 0;
-
-                player1Gradient.GradientStops.Add(new GradientStop((Color)ColorConverter.ConvertFromString(Color1.Normalize()), gradientPlacement));
-                player1Gradient.GradientStops.Add(new GradientStop(Colors.Transparent, gradientPlacement + 0.05));
-
-                player2Gradient.GradientStops.Add(new GradientStop((Color)ColorConverter.ConvertFromString(Color2.Normalize()), gradientPlacement));
-                player2Gradient.GradientStops.Add(new GradientStop(Colors.Transparent, gradientPlacement + 0.05));
-
-                if (i == 1) 
-                    pieceHeld = player1Gradient.Clone();
-
-                Label tmp1 = new Label
-                {
-                    Background = player1Gradient.Clone(),
-                    Content = $"{i}"
-                };
-
-                Label tmp2 = new Label
-                {
-                    Background = player2Gradient.Clone(),
-                    Content = $"{-i}"
-                };
-
-                tmp1.MouseLeftButtonDown += PieceSelected;
-                tmp2.MouseLeftButtonDown += PieceSelected;
-
-                player1.Children.Add(tmp1);
-                player2.Children.Add(tmp2);
-
             }
 
             lobby.Visibility = Visibility.Collapsed;
@@ -189,11 +222,11 @@ namespace PozeraczePart1
         {
             Label s = (Label)sender;
 
-            firstTurn = !firstTurn;
+            int index = gameBoard.Children.IndexOf(s);
+            if (!backendGame.PlacePiece(index / wallSize, index % wallSize, pieceHeldId)) return;
 
+            firstTurn = !firstTurn;
             pieceHeldId = firstTurn ? 1 : -1;
-            Label tmp = firstTurn ? (Label)player1.Children[0] : (Label)player2.Children[0];
-            pieceHeld = (RadialGradientBrush)tmp.Background;
         }
 
         private void PieceSelected(object sender, MouseEventArgs e)
@@ -201,34 +234,40 @@ namespace PozeraczePart1
             Label s = (Label)sender;
 
             if (s.Content.ToString()?[0] == '-' && !firstTurn)
-            {
                 int.TryParse(s.Content.ToString(), out pieceHeldId);
-                pieceHeld = (RadialGradientBrush)s.Background;
-            }
 
             else if (s.Content.ToString()?[0] != '-' && firstTurn)
-            {
                 int.TryParse(s.Content.ToString(), out pieceHeldId);
-                pieceHeld = (RadialGradientBrush)s.Background;
-            }
         }
 
         private void GameBoard_MouseEnter(object sender, RoutedEventArgs e)
         {
             Label s = (Label)sender;
 
-            RadialGradientBrush tmp = pieceHeld;
-            pieceHeld = (RadialGradientBrush)s.Background;
-            s.Background = tmp;
+            int index = gameBoard.Children.IndexOf(s);
+            int number = backendGame.Board[index / wallSize, index % wallSize];
+            if (number * pieceHeldId > 0 || (Math.Abs(number) >= Math.Abs(pieceHeldId) && number * pieceHeldId < 0)) return;
+
+            s.Background = NumberToBackground(pieceHeldId - 1);
         }
 
         private void GameBoard_MouseLeave(object sender, RoutedEventArgs e)
         {
             Label s = (Label)sender;
 
-            RadialGradientBrush tmp = pieceHeld;
-            pieceHeld = (RadialGradientBrush)s.Background;
-            s.Background = tmp.Clone();
+            int index = gameBoard.Children.IndexOf(s);
+            int number = backendGame.Board[index / wallSize, index % wallSize];
+            if (number * pieceHeldId < 0 || Math.Abs(number) > Math.Abs(pieceHeldId)) return;
+
+            s.Background = NumberToBackground(number);
+        }
+
+        private RadialGradientBrush NumberToBackground(int num)
+        {
+            if(pieceHeldId < 0) return player2Backgrounds[Math.Abs(num)];
+            else if (pieceHeldId > 0) return player1Backgrounds[num];
+
+            return defaultBackground;
         }
     }
 }

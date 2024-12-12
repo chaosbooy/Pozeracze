@@ -10,7 +10,6 @@ namespace PozeraczePart1
     {
         int[,] _board;
 
-
         public int[,] Board
         {
             get { return _board; }
@@ -29,7 +28,7 @@ namespace PozeraczePart1
 
         public bool PlacePiece(int horizontal, int vertical, int value)
         {
-            if (Math.Abs(Board[horizontal, vertical]) < value && value * Board[horizontal, vertical] <= 0)
+            if (Math.Abs(Board[horizontal, vertical]) < Math.Abs(value) && value * Board[horizontal, vertical] <= 0)
             {
                 Board[horizontal, vertical] = value;
                 return true;
