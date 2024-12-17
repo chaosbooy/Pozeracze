@@ -13,52 +13,14 @@ namespace PozeraczePart1
     {
         readonly Regex regex = new Regex("[^0-9]+");
         private int pieceHeldId;
-        private bool firstTurn;
+        private bool isFirstTurn;
         private int wallSize;
-        private int pieceCategoryCount = 3;
+        const int pieceCategoryCount = 3;
 
-        private string _color1;
-        private string _color2;
-
-        private RadialGradientBrush[] player1Backgrounds;
-        private RadialGradientBrush[] player2Backgrounds;
+        private Player player1, player2;
         private RadialGradientBrush defaultBackground;
 
         GameBoard backendGame;
-
-        public string Color1
-        {
-            get => _color1;
-            set
-            {
-                _color1 = value;
-
-                if (player2Backgrounds[0] != null)
-                    for (int i = 0; i < pieceCategoryCount; i++)
-                    {
-                        player1Backgrounds[i].GradientStops[0].Color = (Color)ColorConverter.ConvertFromString(Color1);
-                    }
-
-                OnPropertyChanged(nameof(Color1));
-            }
-        }
-
-        public string Color2
-        {
-            get => _color2;
-            set
-            {
-                _color2 = value;
-
-                if(player2Backgrounds[0] != null)
-                    for (int i = 0; i < pieceCategoryCount; i++)
-                    {
-                        player2Backgrounds[i].GradientStops[0].Color = (Color)ColorConverter.ConvertFromString(Color2);
-                    }
-
-                OnPropertyChanged(nameof(Color2));
-            }
-        }
 
         public event PropertyChangedEventHandler ?PropertyChanged;
 
@@ -67,17 +29,15 @@ namespace PozeraczePart1
             InitializeComponent();
             DataContext = this; // Set DataContext to the MainWindow instance.
             backendGame = new GameBoard();
-
-            player1Backgrounds = new RadialGradientBrush[pieceCategoryCount];
-            player2Backgrounds = new RadialGradientBrush[pieceCategoryCount];
             defaultBackground = new RadialGradientBrush();
 
             var center = new Point(0.5, 0.5);
 
-            _color1 = "#B2BCF0";
-            _color2 = "#FFCCE1";
-            Color1 = "#B2BCF0";
-            Color2 = "#FFCCE1";
+            player1 = new Player();
+            player2 = new Player();
+
+            firstColor.Color = (Color)ColorConverter.ConvertFromString("#B2BCF0");
+            secondColor.Color = (Color)ColorConverter.ConvertFromString("#FFCCE1");
 
             defaultBackground.Center = center;
             defaultBackground.GradientOrigin = center;
@@ -85,56 +45,15 @@ namespace PozeraczePart1
             defaultBackground.GradientStops.Add(new GradientStop(Colors.Gray, 0.4));
             defaultBackground.GradientStops.Add(new GradientStop(Colors.Transparent, 0.5));
 
-            for (int i = 0; i < pieceCategoryCount; i++)
-            {
-                player1Backgrounds[i] = new RadialGradientBrush();
-                player2Backgrounds[i] = new RadialGradientBrush();
-
-                player1Backgrounds[i].Center = center;
-                player1Backgrounds[i].GradientOrigin = center;
-
-                player2Backgrounds[i].Center = center;
-                player2Backgrounds[i].GradientOrigin = center;
-            }
-
-            for (int i = 1; i <= pieceCategoryCount; i++)
-            {
-                double gradientPlacement = i * 0.33;
-                gradientPlacement -= gradientPlacement > 0.95 ? 0.05 : 0;
-
-                player1Backgrounds[i - 1].GradientStops.Add(new GradientStop((Color)ColorConverter.ConvertFromString(_color1), gradientPlacement));
-                player1Backgrounds[i - 1].GradientStops.Add(new GradientStop(Colors.Transparent, gradientPlacement + 0.05));
-
-                player2Backgrounds[i - 1].GradientStops.Add(new GradientStop((Color)ColorConverter.ConvertFromString(_color2.Normalize()), gradientPlacement));
-                player2Backgrounds[i - 1].GradientStops.Add(new GradientStop(Colors.Transparent, gradientPlacement + 0.05));
-
-                Label tmp1 = new Label
-                {
-                    Background = player1Backgrounds[i - 1],
-                    Content = $"{i}"
-                };
-
-                Label tmp2 = new Label
-                {
-                    Background = player2Backgrounds[i - 1],
-                    Content = $"-{i}"
-                };
-
-                tmp1.MouseLeftButtonDown += PieceSelected;
-                tmp2.MouseLeftButtonDown += PieceSelected;
-
-                player1.Children.Add(tmp1);
-                player2.Children.Add(tmp2);
-            }
-
-            firstTurn = true;
         }
 
+        //input to number only
         private void TextBox_TextChanged(object sender, TextCompositionEventArgs e)
         {
             e.Handled = regex.IsMatch(e.Text);
         }
 
+        //input to number only
         private void TextBox_Pasting(object sender, DataObjectPastingEventArgs e)
         {
             if (e.DataObject.GetDataPresent(typeof(String)))
@@ -154,18 +73,15 @@ namespace PozeraczePart1
             wallSize = Convert.ToInt16(s.Text);
         }
 
+        //changing game grid size when window size changed
         private void Window_SizeChanged(object sender, SizeChangedEventArgs e)
         {
-            double newSize = (e.NewSize.Width * 0.6 < e.NewSize.Height * 0.8) ? (e.NewSize.Width * 0.6) : (e.NewSize.Height * 0.8);
+            double newSize = (e.NewSize.Width * 0.6 < e.NewSize.Height - 100) ? (e.NewSize.Width * 0.6) : (e.NewSize.Height - 100);
             gameBoard.Height = newSize;
             gameBoard.Width = newSize;
         }
 
-        protected void OnPropertyChanged(string propertyName)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
-
+        //setting up everything for the game to start
         private void StartGame(object sender, RoutedEventArgs e)
         {
             if (!int.TryParse(wallInput.Text, out wallSize) || wallSize < 3)
@@ -177,7 +93,6 @@ namespace PozeraczePart1
             gameBoard.ColumnDefinitions.Clear();
             gameBoard.RowDefinitions.Clear();
             gameBoard.Children.Clear();
-            
 
             for(int i = 0; i < wallSize; i++)
             {
@@ -206,18 +121,87 @@ namespace PozeraczePart1
                 }
             }
 
+
+            //Creating player panels
+            player1Display.Children.Clear();
+            player2Display.Children.Clear();
+
+            player1 = new Player(wallSize - 1);
+            player2 = new Player(wallSize - 1);
+
+            player1.Name = firstName.Text.Trim() == "" ? "player 1" : firstName.Text;
+            player2.Name = secondName.Text.Trim() == "" ? "player 2" : secondName.Text;
+
+            player1.Color = firstColor.Color.ToString();
+            player2.Color = secondColor.Color.ToString();
+
+            var center = new Point(0.5, 0.5);
+
+            for (int i = 1; i <= pieceCategoryCount; i++)
+            {
+                double gradientPlacement = i / (double)pieceCategoryCount;
+                gradientPlacement -= gradientPlacement > 0.95 ? 0.05 : 0;
+
+                RadialGradientBrush player1Backgrounds = new RadialGradientBrush();
+                RadialGradientBrush player2Backgrounds = new RadialGradientBrush();
+
+                player1Backgrounds.Center = center;
+                player1Backgrounds.GradientOrigin = center;
+
+                player2Backgrounds.Center = center;
+                player2Backgrounds.GradientOrigin = center;
+
+                player1Backgrounds.GradientStops.Add(new GradientStop((Color)ColorConverter.ConvertFromString(player1.Color), gradientPlacement));
+                player1Backgrounds.GradientStops.Add(new GradientStop(Colors.Transparent, gradientPlacement + 0.05));
+
+                player2Backgrounds.GradientStops.Add(new GradientStop((Color)ColorConverter.ConvertFromString(player2.Color), gradientPlacement));
+                player2Backgrounds.GradientStops.Add(new GradientStop(Colors.Transparent, gradientPlacement + 0.05));
+
+                Label tmp1 = new Label
+                {
+                    Background = player1Backgrounds,
+                    Content = $"{(player1.pieceNumbers[i - 1] > 0 ? player1.pieceNumbers[i - 1] : null)}"
+                };
+
+                Label tmp2 = new Label
+                {
+                    Background = player2Backgrounds,
+                    Content = $"{(player2.pieceNumbers[i - 1] > 0 ? player2.pieceNumbers[i - 1] : null)}"
+                };
+
+                tmp1.MouseLeftButtonDown += PieceSelected;
+                tmp2.MouseLeftButtonDown += PieceSelected;
+
+                player1Display.Children.Add(tmp1);
+                player2Display.Children.Add(tmp2);
+            }
+
             lobby.Visibility = Visibility.Collapsed;
             game.Visibility = Visibility.Visible;
-            firstTurn = true;
+            settings.Visibility = Visibility.Collapsed;
+            gameBoard.IsEnabled = true;
+            isFirstTurn = true;
+            Label lab = (Label)player1Display.Children[0];
+            lab.Background.Opacity = 0.5;
             pieceHeldId = 1;
         }
 
+        //Going back to lobby
         private void EndGame(object sender, RoutedEventArgs e)
         {
             lobby.Visibility = Visibility.Visible;
             game.Visibility = Visibility.Collapsed;
+            settings.Visibility = Visibility.Collapsed;
         }
 
+        //Game has end showing who won 
+        private void GameLost()
+        {
+            settings.Visibility = Visibility.Visible;
+            gameBoard.IsEnabled = false;
+        }
+
+        //Placing piece, Checking game condition
         private void GameFieldClicked(object sender, RoutedEventArgs e)
         {
             Label s = (Label)sender;
@@ -225,21 +209,53 @@ namespace PozeraczePart1
             int index = gameBoard.Children.IndexOf(s);
             if (!backendGame.PlacePiece(index / wallSize, index % wallSize, pieceHeldId)) return;
 
-            firstTurn = !firstTurn;
-            pieceHeldId = firstTurn ? 1 : -1;
+            if (pieceHeldId > 1)
+            {
+                Label tmp = (Label)player1Display.Children[pieceHeldId - 1];
+                tmp.Content = --player1.pieceNumbers[pieceHeldId - 1];
+            }
+            else if (pieceHeldId < -1)
+            {
+                Label tmp = (Label)player2Display.Children[Math.Abs(pieceHeldId) - 1];
+                tmp.Content = --player2.pieceNumbers[Math.Abs(pieceHeldId) - 1];
+            }
+
+            isFirstTurn = !isFirstTurn;
+
+            NumberToBackground(pieceHeldId).Opacity = 1.0;
+
+            if(backendGame.CheckWin())
+            {
+                winner.Content = $"{(isFirstTurn ? player2.Name : player1.Name)} has won";
+                GameLost();
+            }
+            else if (CheckDraw())
+            {
+                winner.Content = "Draw";
+                GameLost();
+            }
+
+            pieceHeldId = isFirstTurn ? 1 : -1;
+            NumberToBackground(pieceHeldId).Opacity = 0.5;
         }
 
+        //When player has piece clicked
         private void PieceSelected(object sender, MouseEventArgs e)
         {
             Label s = (Label)sender;
 
-            if (s.Content.ToString()?[0] == '-' && !firstTurn)
-                int.TryParse(s.Content.ToString(), out pieceHeldId);
+            NumberToBackground(pieceHeldId).Opacity = 1.0;
 
-            else if (s.Content.ToString()?[0] != '-' && firstTurn)
-                int.TryParse(s.Content.ToString(), out pieceHeldId);
+            if (player2Display.Children.Contains(s) && !isFirstTurn && s.Content.ToString() != "0")
+                pieceHeldId = -player2Display.Children.IndexOf(s) - 1;
+
+            else if (player1Display.Children.Contains(s) && isFirstTurn && s.Content.ToString() != "0") 
+                pieceHeldId = player1Display.Children.IndexOf(s) + 1;
+
+            NumberToBackground(pieceHeldId).Opacity = 0.5;
         }
 
+        //mouse enters game grid piece
         private void GameBoard_MouseEnter(object sender, RoutedEventArgs e)
         {
             Label s = (Label)sender;
@@ -248,26 +264,46 @@ namespace PozeraczePart1
             int number = backendGame.Board[index / wallSize, index % wallSize];
             if (number * pieceHeldId > 0 || (Math.Abs(number) >= Math.Abs(pieceHeldId) && number * pieceHeldId < 0)) return;
 
-            s.Background = NumberToBackground(pieceHeldId - 1);
+            s.Background = NumberToBackground(pieceHeldId);
         }
 
+        //mouse leaves game grid piece
         private void GameBoard_MouseLeave(object sender, RoutedEventArgs e)
         {
             Label s = (Label)sender;
 
             int index = gameBoard.Children.IndexOf(s);
             int number = backendGame.Board[index / wallSize, index % wallSize];
-            if (number * pieceHeldId < 0 || Math.Abs(number) > Math.Abs(pieceHeldId)) return;
 
-            s.Background = NumberToBackground(number);
+            s.Background = NumberToBackground(number).Clone();
         }
 
+        //changing id from num to round background
         private RadialGradientBrush NumberToBackground(int num)
         {
-            if(pieceHeldId < 0) return player2Backgrounds[Math.Abs(num)];
-            else if (pieceHeldId > 0) return player1Backgrounds[num];
+            Label tmp = new Label { Background = defaultBackground };
+            if (num < 0) tmp =  (Label)player2Display.Children[Math.Abs(num) - 1];
+            else if (num > 0) tmp = (Label)player1Display.Children[num - 1];
 
-            return defaultBackground;
+
+            return (RadialGradientBrush) tmp.Background;
+        }
+
+        //checking draw condition because i forgot to put it in backendGame
+        private bool CheckDraw()
+        {
+            for(int i = 1; i < pieceCategoryCount; i++)
+                if (player1.pieceNumbers[i] > 0 || player2.pieceNumbers[i] > 0) return false;
+
+            for(int i = 0; i < wallSize; i++)
+            {
+                for(int j = 0; j < wallSize; j++)
+                {
+                    if (backendGame.Board[i, j] == 0) return false;
+                }
+            }
+
+            return true;
         }
     }
 }

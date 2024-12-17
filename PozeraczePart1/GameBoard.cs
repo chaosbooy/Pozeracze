@@ -57,7 +57,7 @@ namespace PozeraczePart1
             }
 
             bool diagonalWin1 = true, diagonalWin2 = true;
-            for(int i = 0; i < size - 1 && (diagonalWin1 && diagonalWin2); i++)
+            for(int i = 0; i < size - 1 && (diagonalWin1 || diagonalWin2); i++)
             {
                 if (Board[i,i] * Board[i + 1, i + 1] <= 0)
                     diagonalWin1 = false;

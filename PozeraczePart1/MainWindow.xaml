@@ -18,17 +18,18 @@
             <Label Content="POŻeRaczE" FontSize="40" FontWeight="Bold" HorizontalContentAlignment="Center"/>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                 <StackPanel Margin="30">
-                    <Label Content="Player 1 color" />
-                    <syncfusion:ColorPicker Name="firstColor" Height="100" Width="120" Color="{Binding Color1, Mode=TwoWay}" BrushMode="Solid" EnableSolidToGradientSwitch="False" IsAlphaVisible="False" />
-                    <Label Content="{Binding Color1, Mode=TwoWay}" />
+                    <Label Content="Player 1" />
+                    <TextBox x:Name="firstName" MaxLength="10" />
+                    <syncfusion:ColorPicker Name="firstColor" Height="100" Width="120" BrushMode="Solid" EnableSolidToGradientSwitch="False" IsAlphaVisible="False" />
                 </StackPanel>
                 <StackPanel Margin="30">
-                    <Label Content="Player 2 color" />
-                    <syncfusion:ColorPicker Name="secondColor" Height="100" Width="120" Color="{Binding Color2, Mode=TwoWay}" BrushMode="Solid" EnableSolidToGradientSwitch="False" IsAlphaVisible="False" />
+                    <Label Content="Player 2" />
+                    <TextBox x:Name="secondName" MaxLength="10"/>
+                    <syncfusion:ColorPicker Name="secondColor" Height="100" Width="120" BrushMode="Solid" EnableSolidToGradientSwitch="False" IsAlphaVisible="False" />
                 </StackPanel>
             </StackPanel>
-            <Label Margin="0,20,0,0" Content="Podaj wymiar planszy" HorizontalContentAlignment="Center" />
-            <TextBox x:Name="wallInput" FontSize="20" MaxLength="2" HorizontalContentAlignment="Center" PreviewTextInput="TextBox_TextChanged" DataObject.Pasting="TextBox_Pasting"/>
+            <Label Margin="0,20,0,0" Content="Podaj wymiar planszy (min. 3)" HorizontalContentAlignment="Center" />
+            <TextBox x:Name="wallInput" FontSize="20" MaxLength="1" HorizontalContentAlignment="Center" PreviewTextInput="TextBox_TextChanged" DataObject.Pasting="TextBox_Pasting"/>
 
             <Button Content="Start" Margin="0,20,0,0" FontSize="20" Width="200" Click="StartGame"/>
         </StackPanel>
@@ -46,14 +47,16 @@
                 </Style>
             </StackPanel.Resources>
 
-            <StackPanel x:Name="player1">
+            <StackPanel x:Name="player1Display">
                 <StackPanel.Resources>
                     <Style TargetType="Label">
                         <Setter Property="Height" Value="100" />
                         <Setter Property="Width" Value="100" />
                         <Setter Property="Margin" Value="10" />
                         <Setter Property="BorderThickness" Value="9"/>
-                        <Setter Property="Foreground" Value="Transparent" />
+                        <Setter Property="HorizontalContentAlignment" Value="Center" />
+                        <Setter Property="VerticalContentAlignment" Value="Center" />
+                        <Setter Property="FontSize" Value="20" />
                         <Style.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Trigger.Setters>
@@ -93,14 +96,16 @@
                 <Button Content="Lobby" Click="EndGame" Background="#FF87CAA4" BorderThickness="0"/>
             </StackPanel>
 
-            <StackPanel x:Name="player2">
+            <StackPanel x:Name="player2Display">
                 <StackPanel.Resources>
                     <Style TargetType="Label">
                         <Setter Property="Height" Value="100" />
                         <Setter Property="Width" Value="100" />
                         <Setter Property="Margin" Value="10" />
-                        <Setter Property="Foreground" Value="Transparent" />
                         <Setter Property="BorderThickness" Value="9"/>
+                        <Setter Property="HorizontalContentAlignment" Value="Center" />
+                        <Setter Property="VerticalContentAlignment" Value="Center" />
+                        <Setter Property="FontSize" Value="20" />
                         <Style.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Trigger.Setters>
@@ -112,6 +117,16 @@
                 </StackPanel.Resources>
             </StackPanel>
             
+        </StackPanel>
+
+        <StackPanel x:Name="settings" HorizontalAlignment="Center" VerticalAlignment="Center" Background="LightGray" Height="100" Width="300" Visibility="Collapsed">
+            <Label x:Name="winner" Content="kakakakakakak" HorizontalAlignment="Center" FontSize="30"/>
+
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,10,0,0">
+                <Button Content="Return to lobby" Margin="0,0,40,0" FontSize="20" Click="EndGame"/>
+
+                <Button Content="Restart" FontSize="20" Click="StartGame"/>
+            </StackPanel>
         </StackPanel>
 
     </Grid>
